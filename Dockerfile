@@ -150,7 +150,7 @@ COPY add_users.sh /add_users.sh
 RUN sudo sed -i "s/DB_NAME=\"maildb\"/DB_NAME=$DB_NAME/" /add_users.sh
 
 # Set the group ID in the add users script
-RUN sudo sed -i "s/GROUP_ID=\"1002\"/GROUP_ID=\$(id -g $DB_READER_NAME)\"/" /add_users.sh
+RUN sudo sed -i "s/GROUP_ID=\"1002\"/GROUP_ID=\"$(id -g $DB_READER_NAME)\"/" /add_users.sh
 
 # Make executable
 RUN chmod +x /add_users.sh
