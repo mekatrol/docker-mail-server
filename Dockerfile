@@ -127,16 +127,8 @@ RUN service postgresql start && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_ADMIN_NAME WITH PASSWORD '$DB_ADMIN_PASSWORD';"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_READER_NAME WITH PASSWORD '$DB_READER_PASSWORD';"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE users (email VARCHAR PRIMARY KEY, password VARCHAR, realname VARCHAR, maildir VARCHAR NOT NULL, created TIMESTAMP WITH TIME ZONE DEFAULT now());"  && \    
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO users (email, password, realname, maildir) VALUES ('admin@test.com', '', 'Admin', 'admin/');"  && \
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO users (email, password, realname, maildir) VALUES ('catchall@test.com', '', 'Catch All', 'catchall/');" && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE transports (domain VARCHAR PRIMARY KEY, gid INTEGER UNIQUE NOT NULL, transport VARCHAR NOT NULL);"  && \    
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO transports (domain, gid, transport) VALUES ('test.com', '$(id -u $DB_READER_NAME)', 'virtual:');" && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE aliases (alias VARCHAR PRIMARY KEY, email VARCHAR NOT NULL);"  && \    
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO aliases (alias, email) VALUES ('@test.com', 'catchall@test.com');" && \
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO aliases (alias, email) VALUES ('catchall@test.com', 'catchall@test.com');" && \
-    sudo -u postgres psql -d $DB_NAME -c "INSERT INTO aliases (alias, email) VALUES ('admin@test.com', 'admin@test.com');" && \
-    sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; update users set password = '{BLF-CRYPT}' || crypt('password123', gen_salt('bf', 12)) where email='catchall@test.com';" && \
-    sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; update users set password = '{BLF-CRYPT}' || crypt('password123', gen_salt('bf', 12)) where email='admin@test.com';" && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_ADMIN_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON users TO $DB_ADMIN_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT UPDATE ON users TO $DB_ADMIN_NAME;"  && \
@@ -147,6 +139,21 @@ RUN service postgresql start && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON users TO $DB_READER_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON aliases TO $DB_READER_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON transports TO $DB_READER_NAME;"
+
+# Copy the users definition file
+COPY users.csv /users.csv
+
+# Copy the user add shell script
+COPY add_users.sh /add_users.sh
+
+# Set the DB name in the add users script
+RUN sudo sed -i "s/DB_NAME=\"maildb\"/DB_NAME=$DB_NAME/" /add_users.sh
+
+# Set the group ID in the add users script
+RUN sudo sed -i "s/GROUP_ID=\"1002\"/GROUP_ID=\$(id -g $DB_READER_NAME)\"/" /add_users.sh
+
+# Make executable
+RUN chmod +x /add_users.sh
 
 # Configure SQL for reading users
 RUN echo "user=$DB_READER_NAME" > /etc/postfix/users.cf
