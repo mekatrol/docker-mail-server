@@ -9,6 +9,8 @@ csv_file="/users.csv"
 # Initialize a row counter
 row_number=0
 
+sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
 # Read the file, skipping the first line
 tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catchall; do
     ((row_number++))
@@ -20,7 +22,7 @@ tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catc
         domain="${email#*@}"
 
         # Add user email
-        sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; INSERT INTO users (email, password, realname, maildir) VALUES ('$email', '{BLF-CRYPT}' || crypt('$password', gen_salt('bf', 12)), '$display_name', '${domain//./_}_${username}/');"
+        sudo -u postgres psql -d $DB_NAME -c "INSERT INTO users (email, password, realname, maildir) VALUES ('$email', '{BLF-CRYPT}' || crypt('$password', gen_salt('bf', 12)), '$display_name', '${domain//./_}_${username}/');"
 
         # Add alias
         sudo -u postgres psql -d $DB_NAME -c "INSERT INTO aliases (alias, email) VALUES ('$email', '$email');"
