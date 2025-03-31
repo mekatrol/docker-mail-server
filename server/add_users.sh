@@ -12,7 +12,7 @@ row_number=0
 sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
 # Read the file, skipping the first line
-tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catchall; do
+tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catchall || [ -n "$email" ]; do
     ((row_number++))
 
     if [ -n "$email" ] && [ -n "$password" ] && [ -n "$is_catchall" ]; then
