@@ -184,8 +184,22 @@ RUN echo "select_field=transport" >> /etc/postfix/transports.cf
 RUN echo "where_field=domain" >> /etc/postfix/transports.cf
 RUN echo "hosts=localhost" >> /etc/postfix/transports.cf
 
-RUN sudo mv /etc/postfix/master.cf /etc/postfix/master.cf.bak
-ADD postfix/master.cf /etc/postfix/master.cf
+RUN sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
+
+RUN sed -i '/^#submission inet n[[:space:]]\+-[[:space:]]\+y[[:space:]]\+-[[:space:]]\+-[[:space:]]\+smtpd/,/^#/c\
+submission inet n       -       y       -       -       smtpd\n\
+  -o syslog_name=postfix/submission\n\
+  -o smtpd_tls_wrappermode=no\n\
+  -o smtpd_tls_security_level=encrypt\n\
+  -o smtpd_sasl_auth_enable=yes\n\
+  -o smtpd_sasl_type=dovecot\n\
+  -o smtpd_sasl_path=private/auth' /etc/postfix/master.cf
+
+RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_mynetworks,permit_sasl_authenticated,defer/' /etc/postfix/master.cf
+
+RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
+cleanup   unix  n       -       y       -       0       cleanup\n\
+  -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
 
 # Careful of the single and double quoted strings in postconf settings (that is deliberate)
 RUN sudo postconf -e "myhostname = $HOSTNAME"
