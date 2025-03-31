@@ -4,19 +4,19 @@ A docker container for postfix / dovecot mail server with postgres virtual mailb
 
 ## Server folder
 
-> a full mail server and can be used without the relay.
+> An email server Dockerfile to create a fully configured image.
 
 ## Relay folder
 
-> a postfix MTA to relay emails (over encrypted link) to the server. Useful to allow SMTP server to run in cloud (on small resource/low cost host) and then server part can be run on private local on-premises stack (e.g. at home). Running the server on 'in house' servers means that extension such as AI spam detection can run using cheaper GPU / TPU resources (GPUs in cloud can be expensive). Especially when training the AI models.
+> Under developement. Not usable for now (or maybe forever!)...
 
 ## Running the Server
 
 ### Copy files
 
 1.  add_users.sh - a script that can be executed to add email users and catch all addresses.
-2.  create.sh - creates the Docker network, image and container to run the server.
-3.  destroy.sh - destroys the container and image (but not network).
+2.  create.sh - creates the Docker network, image and container then runs the server.
+3.  destroy.sh - destroys the container and image (but not network). For quick cleanup while debuggin image / container creation.
 4.  Dockerfile - the Dockerfile used to build the server image. This file contains all of the configuration for NGINX, Postfix, Dovecot, Postgres, etc
 5.  user.csv - can be used to define the users, passwords and catch all addresses.
 
@@ -124,7 +124,6 @@ will create the users:
 -------------------+-------------------------------------------------------------------------+-----------+--------------------
  admin@test.com    | {BLF-CRYPT}$2a$12$K/Pb96m6Zja7XIJLiDgUtOvpaqjuLL84eZfGZUuV/UyAh94fsWkt. | Admin     | test_com_admin/
  catchall@test.com | {BLF-CRYPT}$2a$12$uVaMvJa7HhlbF8Wj2TuTZurHt9qLp86Jlh47/ZkXiktGilqrhYTc2 | Catch All | test_com_catchall/
-(2 rows)
 ```
 
 the following aliases:
@@ -135,7 +134,6 @@ the following aliases:
  admin@test.com    | admin@test.com
  catchall@test.com | catchall@test.com
  @test.com         | catchall@test.com
-(3 rows)
 ```
 
 and the following transports:
