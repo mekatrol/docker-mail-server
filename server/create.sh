@@ -87,7 +87,7 @@ CONTAINER_IP_ADDR="172.16.3.200"
 CONTAINER_HOST_NAME="$HOSTNAME"
 
 # The lets encrypt volume
-CONTAINER_VOLUME_1="/data/etc-letsencrypt:/etc/letsencrypt"
+LETS_ENCRYPT_VOLUME="/data/etc-letsencrypt:/etc/letsencrypt"
 
 # Check if the network exists
 if ! docker network ls --format '{{.Name}}' | grep -q "^$NETWORK_NAME$"; then
@@ -121,5 +121,5 @@ docker run \
     --ip="$CONTAINER_IP_ADDR" \
     --name="$CONTAINER_NAME" \
     --hostname="$CONTAINER_HOST_NAME" \
-    --volume="$CONTAINER_VOLUME_1" \
+    --volume="$LETS_ENCRYPT_VOLUME" \
     "$IMAGE_NAME"
