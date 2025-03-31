@@ -89,10 +89,10 @@ RUN rm -rf /var/lib/apt/lists/*
 #   993 - POP3
 EXPOSE 80 443 22 25 587 993
 
-# Set up the cron job to renew certificates
+# Set up the cron job to renew certificates once per week
 # Use to generate in first instance:
 #   certbot certonly --webroot --webroot-path=/var/www/html --email admin@test.com --agree-tos --cert-name mail.test.com-rsa -d mail.test.com --key-type rsa
-RUN echo "0 0 * * * root certbot renew --quiet && nginx -s reload" > /etc/cron.d/certbot-renewal
+RUN echo "0 0 */7 * * root certbot renew --quiet && nginx -s reload" > /etc/cron.d/certbot-renewal
 
 # Create a directory to store cron logs
 RUN mkdir -p /var/log/cron
