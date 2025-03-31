@@ -94,14 +94,11 @@ EXPOSE 80 443 22 25 587 993
 #   certbot certonly --webroot --webroot-path=/var/www/html --email admin@test.com --agree-tos --cert-name mail.test.com-rsa -d mail.test.com --key-type rsa
 RUN echo "0 0 * * * root certbot renew --quiet && nginx -s reload" > /etc/cron.d/certbot-renewal
 
-# Set cron job permissions, Owner = read/write | Group = read | Others = read
-RUN chmod 0644 /etc/cron.d/certbot-renewal
-
-# Add cron job
-RUN crontab /etc/cron.d/certbot-renewal
-
 # Create a directory to store cron logs
 RUN mkdir -p /var/log/cron
+
+# Set cron job permissions, Owner = read/write | Group = read | Others = read
+RUN chmod 0644 /etc/cron.d/certbot-renewal
 
 # Create the SSH user and set a password
 RUN useradd -m -s /bin/bash $SSH_USER_NAME && echo "$SSH_USER_NAME:$SSH_USER_PASSWORD" | chpasswd
