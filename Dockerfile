@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Expected arguments
 ARG DB_NAME
+ARG POSTGRES_PASSWORD
 ARG DB_ADMIN_NAME
 ARG DB_ADMIN_PASSWORD
 ARG DB_READER_NAME
@@ -20,11 +21,15 @@ RUN if [ -z "$DB_NAME" ]; then \
     echo "Error: DB_NAME must be defined!" && exit 1; \
     fi
 
+RUN if [ -z "$POSTGRES_PASSWORD" ]; then \
+    echo "Error: POSTGRES_PASSWORD must be defined!" && exit 1; \
+    fi
+
 RUN if [ -z "$DB_ADMIN_NAME" ]; then \
     echo "Error: DB_ADMIN_NAME must be defined!" && exit 1; \
     fi
 
-RUN if [ -z "$DB_ADMIN_PASSWORD" ]; then \
+    RUN if [ -z "$DB_ADMIN_PASSWORD" ]; then \
     echo "Error: DB_ADMIN_PASSWORD must be defined!" && exit 1; \
     fi
 
@@ -122,7 +127,7 @@ RUN sudo chown $DB_READER_NAME:$DB_READER_NAME /home/mail
 
 # Set up PostgreSQL
 RUN service postgresql start && \
-    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '\!Pass@word1';"  && \
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$POSTGRES_PASSWORD';"  && \
     sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_ADMIN_NAME WITH PASSWORD '$DB_ADMIN_PASSWORD';"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_READER_NAME WITH PASSWORD '$DB_READER_PASSWORD';"  && \
