@@ -223,9 +223,15 @@ RUN sudo postconf -e 'transport_maps = pgsql:/etc/postfix/transports.cf'
 # Set cleanup options
 RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks 
 
-# Configure Dovecot
-RUN sudo mv /etc/dovecot/conf.d/10-master.conf /etc/dovecot/conf.d/10-master.conf.bak
-ADD dovecot/10-master.conf /etc/dovecot/conf.d/10-master.conf
+# Configure Dovecot master.cf
+RUN sudo cp /etc/dovecot/conf.d/10-master.conf /etc/dovecot/conf.d/10-master.conf.bak
+RUN sed -i '/unix_listener auth-userdb {/,/}/c\
+unix_listener auth-userdb {\n\
+    path = /var/spool/postfix/private/auth\n\
+    mode = 0600\n\
+    user = postfix\n\
+    group = postfix\n\
+  }' /etc/dovecot/conf.d/10-master.conf
 
 # Configure Dovecot SSL
 RUN sudo cp /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.bak
