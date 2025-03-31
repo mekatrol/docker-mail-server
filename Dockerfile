@@ -227,12 +227,15 @@ RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks
 RUN sudo mv /etc/dovecot/conf.d/10-master.conf /etc/dovecot/conf.d/10-master.conf.bak
 ADD dovecot/10-master.conf /etc/dovecot/conf.d/10-master.conf
 
-RUN sudo mv /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.bak
-ADD dovecot/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf
+# Configure Dovecot SSL
+RUN sudo cp /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.bak
+RUN sudo sed -i 's/^ssl = yes/ssl = required/' /etc/dovecot/conf.d/10-ssl.conf
+RUN sudo sed -i "s/^ssl_cert = <\/etc\/dovecot\/private\/dovecot.pem/ssl_cert = <\/etc\/letsencrypt\/live\/$HOSTNAME-rsa\/fullchain.pem/" /etc/dovecot/conf.d/10-ssl.conf
+RUN sudo sed -i "s/^ssl_key = <\/etc\/dovecot\/private\/dovecot.key/ssl_key = <\/etc\/letsencrypt\/live\/$HOSTNAME-rsa\/privkey.pem/" /etc/dovecot/conf.d/10-ssl.conf
+RUN sudo sed -i 's/^#ssl_min_protocol = TLSv1.2/ssl_min_protocol = TLSv1.2/' /etc/dovecot/conf.d/10-ssl.conf
+RUN sudo sed -i 's/^#ssl_prefer_server_ciphers = no/ssl_prefer_server_ciphers = yes/' /etc/dovecot/conf.d/10-ssl.conf
 
-# Replace host name with env variable value
-RUN sudo sed -i "s/\$HOSTNAME/$HOSTNAME/" /etc/dovecot/conf.d/10-ssl.conf
-
+# Configure Dovecot auth for SQL
 RUN sudo sed -i 's/^!include auth-system.conf.ext/#!include auth-system.conf.ext/' /etc/dovecot/conf.d/10-auth.conf
 RUN sudo sed -i 's/^#!include auth-sql.conf.ext/!include auth-sql.conf.ext/' /etc/dovecot/conf.d/10-auth.conf
 
