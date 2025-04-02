@@ -8,6 +8,7 @@ ARG SSH_USER_NAME
 ARG SSH_USER_PASSWORD
 ARG HOSTNAME
 ARG MAIL_DOMAIN
+ARG RELAY_TO
 ARG TIMEZONE
 
 RUN if [ -z "$SSH_USER_NAME" ]; then \
@@ -26,7 +27,11 @@ RUN if [ -z "$MAIL_DOMAIN" ]; then \
     echo "Error: MAIL_DOMAIN must be defined!" && exit 1; \
     fi
 
-RUN if [ -z "$TIMEZONE" ]; then \
+RUN if [ -z "$RELAY_TO" ]; then \
+    echo "Error: RELAY_TO must be defined!" && exit 1; \
+    fi
+
+    RUN if [ -z "$TIMEZONE" ]; then \
     echo "Error: TIMEZONE must be defined!" && exit 1; \
     fi
 
@@ -92,11 +97,16 @@ RUN sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/
 RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem"
 RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
-RUN sudo postconf -e "relay_host = 172.16.3.200"
+RUN sudo postconf -e "relay_host = $RELAY_TO"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
+RUN sudo postconf -e "transport_maps = hash:/etc/postfix/transport"
 
 # Disable local mail delivery on mailserver, we are relaying to another server
 RUN sudo postconf -e 'local_recipient_maps = '
+
+RUN echo "$MAIL_DOMAIN smtp:[$RELAY_TO]"  > /etc/postfix/transport
+
+RUN sudo postmap /etc/postfix/transport
 
 # Set cleanup options
 RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks 
