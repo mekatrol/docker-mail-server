@@ -39,7 +39,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     tzdata \
     cron \
     openssh-server \
-    nginx \
     certbot \
     python3-certbot-nginx \
     nginx \
@@ -47,7 +46,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
 
 RUN rm -rf /var/lib/apt/lists/*
 
-# The ports ot expose:
+# The ports to expose:
 #    80 - for lets encrypt to prove domain ownership in .well-known/acme-challenge
 #   443 - NGINX https
 #    22 - SSH
@@ -79,8 +78,7 @@ RUN mkdir /var/run/sshd
 # Exclude core messages in docker cotnainer
 RUN sudo sed -i 's/system()/system(exclude-kmsg(yes))/g' /etc/syslog-ng/syslog-ng.conf
 
-RUN sudo mv /etc/postfix/master.cf /etc/postfix/master.cf.bak
-ADD postfix/master.cf /etc/postfix/master.cf
+RUN sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 
 # Careful of the single and double quoted strings in postconf settings (that is deliberate)
 RUN sudo postconf -e "myhostname = $HOSTNAME"
@@ -94,26 +92,11 @@ RUN sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/
 RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem"
 RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
+RUN sudo postconf -e "relay_host = 172.16.3.200"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
 
-# Disable local mail delivery on mailserver, we are using virtual mailboxes
+# Disable local mail delivery on mailserver, we are relaying to another server
 RUN sudo postconf -e 'local_recipient_maps = '
-
-# Set the owner of all mailboxes to 
-RUN sudo postconf -e "virtual_uid_maps = static:$(id -u $DB_READER_NAME)"
-RUN sudo postconf -e "virtual_gid_maps = static:$(id -g $DB_READER_NAME)"
-
-# Set virtual mailbox bas address
-RUN sudo postconf -e 'virtual_mailbox_base = /home/mail/'
-
-# Configre how to map to virtual mailboxes
-RUN sudo postconf -e 'virtual_mailbox_maps = pgsql:/etc/postfix/users.cf'
-
-# Configure how to map to aliases
-RUN sudo postconf -e 'virtual_alias_maps = pgsql:/etc/postfix/aliases.cf'
-
-# Configure how to map to transports
-RUN sudo postconf -e 'transport_maps = pgsql:/etc/postfix/transports.cf'
 
 # Set cleanup options
 RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks 
@@ -166,9 +149,7 @@ RUN echo "#!/bin/bash\n\
     sudo service syslog-ng start\n\
     sudo service cron start\n\
     sudo service ssh start\n\
-    sudo service postgresql start\n\
     sudo service postfix start\n\
-    sudo service dovecot start\n\
     sudo nginx -g 'daemon off;'\n\
     tail -f /var/log/mail.log" > /start.sh && chmod +x /start.sh
 

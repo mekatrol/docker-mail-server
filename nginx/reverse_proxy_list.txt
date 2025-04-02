@@ -1,0 +1,2 @@
+mail.test.com 122.168.10.10
+smtp.test.com 122.168.10.11

@@ -79,7 +79,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
 
 RUN rm -rf /var/lib/apt/lists/*
 
-# The ports ot expose:
+# The ports to expose:
 #    80 - for lets encrypt to prove domain ownership in .well-known/acme-challenge
 #   443 - NGINX https
 #    22 - SSH
