@@ -73,7 +73,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     nginx \
     certbot \
     python3-certbot-nginx \
-    nginx \
     postfix postfix-pgsql \
     dovecot-core dovecot-imapd dovecot-pop3d dovecot-pgsql \
     postgresql postgresql-contrib 
