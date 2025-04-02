@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Name of the container
-CONTAINER_NAME="mail-server"
+CONTAINER_NAME="mail-relay"
 
 # Name of the image
-IMAGE_NAME="mail-server"
+IMAGE_NAME="mail-relay"
 
 # Check if the container exists
 if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
     echo "Container '$CONTAINER_NAME' exists."
-    
+
     # Stop the container if it is running
     if docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
         echo "Stopping container '$CONTAINER_NAME'..."

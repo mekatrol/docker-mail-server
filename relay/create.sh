@@ -29,10 +29,10 @@ if [ -z "$TIMEZONE" ]; then
 fi
 
 # The name of the image that will be created with 'docker build'
-IMAGE_NAME="mail-server-relay"
+IMAGE_NAME="mail-relay"
 
 # The name of the container that will be created with docker run
-CONTAINER_NAME="mail-server-relay"
+CONTAINER_NAME="mail-relay"
 
 # The name of the network the mail server will use
 NETWORK_NAME="mail-server-network"
