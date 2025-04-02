@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # e.g. to run this script:
-# SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" TIMEZONE="Australia/Sydney" ./create.sh
+# SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" RELAY_TO="internalmail.test.com" TIMEZONE="Australia/Sydney" ./create.sh
 
 if [ -z "$SSH_USER_NAME" ]; then
     echo "Error: SSH_USER_NAME must be defined!"
@@ -20,6 +20,11 @@ fi
 
 if [ -z "$MAIL_DOMAIN" ]; then
     echo "Error: MAIL_DOMAIN must be defined!"
+    exit 1
+fi
+
+if [ -z "$RELAY_TO" ]; then
+    echo "Error: RELAY_TO must be defined!"
     exit 1
 fi
 
@@ -73,6 +78,7 @@ if ! docker image ls --format '{{.Tag}}' | grep -q "^$IMAGE_NAME$"; then
         --build-arg SSH_USER_PASSWORD="$SSH_USER_PASSWORD" \
         --build-arg HOSTNAME="$HOSTNAME" \
         --build-arg MAIL_DOMAIN="$MAIL_DOMAIN" \
+        --build-arg RELAY_TO="$RELAY_TO" \
         --build-arg TIMEZONE="$TIMEZONE" \
         .
 else

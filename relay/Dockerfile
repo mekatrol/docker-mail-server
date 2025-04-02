@@ -85,6 +85,23 @@ RUN sudo sed -i 's/system()/system(exclude-kmsg(yes))/g' /etc/syslog-ng/syslog-n
 
 RUN sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 
+# RUN sudo sed -i '/^smtp      inet/s/.*/smtp      inet  n       -       y       -       -       smtpd\n  -o smtpd_tls_security_level=encrypt\n  -o smtpd_tls_wrappermode=no/' /etc/postfix/master.cf
+
+# RUN sed -i '/^#submission inet n[[:space:]]\+-[[:space:]]\+y[[:space:]]\+-[[:space:]]\+-[[:space:]]\+smtpd/,/^#/c\
+# submission inet n       -       y       -       -       smtpd\n\
+#   -o syslog_name=postfix/submission\n\
+#   -o smtpd_tls_wrappermode=no\n\
+#   -o smtpd_tls_security_level=encrypt\n\
+#   -o smtpd_sasl_auth_enable=yes\n\
+#   -o smtpd_sasl_type=dovecot\n\
+#   -o smtpd_sasl_path=private/auth' /etc/postfix/master.cf
+
+# RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_mynetworks,permit_sasl_authenticated,defer/' /etc/postfix/master.cf
+
+RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
+cleanup   unix  n       -       y       -       0       cleanup\n\
+  -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
+
 # Careful of the single and double quoted strings in postconf settings (that is deliberate)
 RUN sudo postconf -e "myhostname = $HOSTNAME"
 RUN sudo postconf -e "mydomain = $MAIL_DOMAIN"
@@ -93,6 +110,12 @@ RUN sudo postconf -e 'inet_interfaces = all'
 RUN sudo postconf -e 'inet_protocols = ipv4' 
 RUN sudo postconf -e 'mailbox_size_limit = 0' 
 RUN sudo postconf -e 'message_size_limit = 10240000' 
+# RUN sudo postconf -e 'smtp_tls_security_level = encrypt' 
+# RUN sudo postconf -e 'smtp_tls_wrappermode = yes'
+# RUN sudo postconf -e 'smtp_tls_mandatory_protocols = !SSLv2, !SSLv3'
+# RUN sudo postconf -e 'smtp_tls_mandatory_ciphers = high'
+# RUN sudo postconf -e 'smtp_tls_loglevel = 1'
+# RUN sudo postconf -e 'smtp_tls_note_starttls_offer = yes'
 RUN sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/fullchain.pem"
 RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem"
 RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
