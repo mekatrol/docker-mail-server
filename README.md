@@ -99,6 +99,9 @@ With:
 
 > MAIL_DOMAIN - the email domain (e.g. test.com).
 
+> IS_PUBLICLY_ACCESSIBLE - if set to false the SMTP server will require STARTTLS on port 25 by setting: `smtpd_tls_security_level = encrypt`
+> See: https://www.postfix.org/TLS_README.html#:~:text=You%20can%20ENFORCE%20the%20use,publicly%2Dreferenced%20Postfix%20SMTP%20server.
+
 > TIMEZONE - the timezone for the server.
 
 ## Adding users

@@ -14,6 +14,7 @@ ARG SSH_USER_NAME
 ARG SSH_USER_PASSWORD
 ARG HOSTNAME
 ARG MAIL_DOMAIN
+ARG IS_PUBLICLY_ACCESSIBLE
 ARG TIMEZONE
 
 # Validate arguments have been set
@@ -55,6 +56,10 @@ RUN if [ -z "$HOSTNAME" ]; then \
 
 RUN if [ -z "$MAIL_DOMAIN" ]; then \
     echo "Error: MAIL_DOMAIN must be defined!" && exit 1; \
+    fi
+
+RUN if [ -z "$IS_PUBLICLY_ACCESSIBLE" ]; then \
+    echo "Error: IS_PUBLICLY_ACCESSIBLE must be defined!" && exit 1; \
     fi
 
 RUN if [ -z "$TIMEZONE" ]; then \
@@ -213,6 +218,9 @@ RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/p
 RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
+
+# This is not a publicly accessible SMTP server, so force encrypt (client must use STARTLS)
+RUN if [ "$IS_PUBLICLY_ACCESSIBLE" = "false" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
 
 # Disable local mail delivery on mailserver, we are using virtual mailboxes
 RUN sudo postconf -e 'local_recipient_maps = '
