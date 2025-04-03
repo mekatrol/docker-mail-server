@@ -73,6 +73,7 @@ SSH_USER_NAME="ssh" \
 SSH_USER_PASSWORD="pwd" \
 HOSTNAME="mail.test.com" \
 MAIL_DOMAIN="test.com" \
+IS_PUBLICLY_ACCESSIBLE="false" \
 TIMEZONE="Australia/Sydney" \
 ./create.sh
 ```
