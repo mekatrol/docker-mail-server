@@ -14,7 +14,7 @@ ARG SSH_USER_NAME
 ARG SSH_USER_PASSWORD
 ARG HOSTNAME
 ARG MAIL_DOMAIN
-ARG IS_PUBLICLY_ACCESSIBLE
+ARG REQUIRE_STARTTLS
 ARG TIMEZONE
 
 # Validate arguments have been set
@@ -58,8 +58,8 @@ RUN if [ -z "$MAIL_DOMAIN" ]; then \
     echo "Error: MAIL_DOMAIN must be defined!" && exit 1; \
     fi
 
-RUN if [ -z "$IS_PUBLICLY_ACCESSIBLE" ]; then \
-    echo "Error: IS_PUBLICLY_ACCESSIBLE must be defined!" && exit 1; \
+RUN if [ -z "$REQUIRE_STARTTLS" ]; then \
+    echo "Error: REQUIRE_STARTTLS must be defined!" && exit 1; \
     fi
 
 RUN if [ -z "$TIMEZONE" ]; then \
@@ -220,7 +220,7 @@ RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
 
 # This is not a publicly accessible SMTP server, so force encrypt (client must use STARTLS)
-RUN if [ "$IS_PUBLICLY_ACCESSIBLE" = "false" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
+RUN if [ "$REQUIRE_STARTTLS" = "false" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
 
 # Disable local mail delivery on mailserver, we are using virtual mailboxes
 RUN sudo postconf -e 'local_recipient_maps = '

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # e.g. to run this script:
-# DB_NAME="maildb" POSTGRES_PASSWORD="postgress_pwd" DB_ADMIN_NAME="db_admin" DB_ADMIN_PASSWORD="admin_pwd" DB_READER_NAME="db_reader" DB_READER_PASSWORD="reader_pwd" SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" IS_PUBLICLY_ACCESSIBLE="false" TIMEZONE="Australia/Sydney" ./create.sh
+# DB_NAME="maildb" POSTGRES_PASSWORD="postgress_pwd" DB_ADMIN_NAME="db_admin" DB_ADMIN_PASSWORD="admin_pwd" DB_READER_NAME="db_reader" DB_READER_PASSWORD="reader_pwd" SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" REQUIRE_STARTTLS="false" TIMEZONE="Australia/Sydney" ./create.sh
 
 # Check required arguments
 if [ -z "$DB_NAME" ]; then
@@ -44,8 +44,8 @@ if [ -z "$MAIL_DOMAIN" ]; then
     exit 1
 fi
 
-if [ -z "$IS_PUBLICLY_ACCESSIBLE" ]; then
-    echo "Error: IS_PUBLICLY_ACCESSIBLE must be defined!"
+if [ -z "$REQUIRE_STARTTLS" ]; then
+    echo "Error: REQUIRE_STARTTLS must be defined!"
     exit 1
 fi
 
@@ -115,7 +115,7 @@ if ! docker image ls --format '{{.Tag}}' | grep -q "^$IMAGE_NAME$"; then
         --build-arg SSH_USER_PASSWORD="$SSH_USER_PASSWORD" \
         --build-arg HOSTNAME="$HOSTNAME" \
         --build-arg MAIL_DOMAIN="$MAIL_DOMAIN" \
-        --build-arg IS_PUBLICLY_ACCESSIBLE="$IS_PUBLICLY_ACCESSIBLE" \
+        --build-arg REQUIRE_STARTTLS="$REQUIRE_STARTTLS" \
         --build-arg TIMEZONE="$TIMEZONE" \
         .
 else
