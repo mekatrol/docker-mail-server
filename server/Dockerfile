@@ -219,8 +219,8 @@ RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
 
-# This is not a publicly accessible SMTP server, so force encrypt (client must use STARTLS)
-RUN if [ "$REQUIRE_STARTTLS" = "false" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
+# Force encrypt (client must use STARTLS)
+RUN if [ "$REQUIRE_STARTTLS" = "true" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
 
 # Disable local mail delivery on mailserver, we are using virtual mailboxes
 RUN sudo postconf -e 'local_recipient_maps = '
