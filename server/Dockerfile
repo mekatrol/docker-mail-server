@@ -16,6 +16,10 @@ ARG HOSTNAME
 ARG MAIL_DOMAIN
 ARG REQUIRE_STARTTLS
 ARG TIMEZONE
+ARG ADDITIONAL_MY_NETWORKS
+
+# Configuration file directory
+ARG CONFIG_DIR="/home/${SSH_USER_NAME}"
 
 # Validate arguments have been set
 RUN if [ -z "$DB_NAME" ]; then \
@@ -30,7 +34,7 @@ RUN if [ -z "$DB_ADMIN_NAME" ]; then \
     echo "Error: DB_ADMIN_NAME must be defined!" && exit 1; \
     fi
 
-    RUN if [ -z "$DB_ADMIN_PASSWORD" ]; then \
+RUN if [ -z "$DB_ADMIN_PASSWORD" ]; then \
     echo "Error: DB_ADMIN_PASSWORD must be defined!" && exit 1; \
     fi
 
@@ -66,7 +70,11 @@ RUN if [ -z "$TIMEZONE" ]; then \
     echo "Error: TIMEZONE must be defined!" && exit 1; \
     fi
 
-    # Install packages
+RUN if [ -z "$ADDITIONAL_MY_NETWORKS" ]; then \
+    echo "Error: ADDITIONAL_MY_NETWORKS must be defined!" && exit 1; \
+    fi
+
+# Install packages
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     sudo \
     syslog-ng \
@@ -147,77 +155,97 @@ RUN service postgresql start && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON transports TO $DB_READER_NAME;"
 
 # Copy the users definition file
-COPY users.csv /users.csv
+COPY users.csv $CONFIG_DIR/users.csv 
 
 # Copy the user add shell script
-COPY add_users.sh /add_users.sh
+COPY add_users.sh $CONFIG_DIR/add_users.sh
+
+# Change ownership
+RUN sudo chown remote:remote $CONFIG_DIR/add_users.sh && sudo chown $SSH_USER_NAME:$SSH_USER_NAME $CONFIG_DIR/users.csv
+
 
 # Set the DB name in the add users script
-RUN sudo sed -i "s/DB_NAME=\"maildb\"/DB_NAME=$DB_NAME/" /add_users.sh
+RUN sudo sed -i "s/DB_NAME=\"maildb\"/DB_NAME=$DB_NAME/" $CONFIG_DIR/add_users.sh
 
 # Set the group ID in the add users script
-RUN sudo sed -i "s/GROUP_ID=\"1002\"/GROUP_ID=\"$(id -g $DB_READER_NAME)\"/" /add_users.sh
+RUN sudo sed -i "s/GROUP_ID=\"1002\"/GROUP_ID=\"$(id -g $DB_READER_NAME)\"/" $CONFIG_DIR/add_users.sh
 
 # Make executable
-RUN chmod +x /add_users.sh
+RUN chmod +x $CONFIG_DIR/add_users.sh
 
 # Configure SQL for reading users
-RUN echo "user=$DB_READER_NAME" > /etc/postfix/users.cf
-RUN echo "password=$DB_READER_PASSWORD" >> /etc/postfix/users.cf
-RUN echo "dbname=$DB_NAME" >> /etc/postfix/users.cf
-RUN echo "table=users" >> /etc/postfix/users.cf
-RUN echo "select_field=maildir" >> /etc/postfix/users.cf
-RUN echo "where_field=email" >> /etc/postfix/users.cf
-RUN echo "hosts=localhost" >> /etc/postfix/users.cf
+RUN cat <<EOF > /etc/postfix/users.cf
+user=$DB_READER_NAME
+password=$DB_READER_PASSWORD
+dbname=$DB_NAME
+table=users
+select_field=maildir
+where_field=email
+hosts=localhost
+EOF
 
 # Configure SQL for reading aliases
-RUN echo "user=$DB_READER_NAME" > /etc/postfix/aliases.cf
-RUN echo "password=$DB_READER_PASSWORD" >> /etc/postfix/aliases.cf
-RUN echo "dbname=$DB_NAME" >> /etc/postfix/aliases.cf
-RUN echo "table=aliases" >> /etc/postfix/aliases.cf
-RUN echo "select_field=email" >> /etc/postfix/aliases.cf
-RUN echo "where_field=alias" >> /etc/postfix/aliases.cf
-RUN echo "hosts=localhost" >> /etc/postfix/aliases.cf
+RUN cat <<EOF > /etc/postfix/aliases.cf
+user=$DB_READER_NAME
+password=$DB_READER_PASSWORD
+dbname=$DB_NAME
+table=aliases
+select_field=email
+where_field=alias
+hosts=localhost
+EOF
 
 # Configure SQL for reading transports
-RUN echo "user=$DB_READER_NAME" > /etc/postfix/transports.cf
-RUN echo "password=$DB_READER_PASSWORD" >> /etc/postfix/transports.cf
-RUN echo "dbname=$DB_NAME" >> /etc/postfix/transports.cf
-RUN echo "table=transports" >> /etc/postfix/transports.cf
-RUN echo "select_field=transport" >> /etc/postfix/transports.cf
-RUN echo "where_field=domain" >> /etc/postfix/transports.cf
-RUN echo "hosts=localhost" >> /etc/postfix/transports.cf
+RUN cat <<EOF > /etc/postfix/transports.cf
+user=$DB_READER_NAME
+password=$DB_READER_PASSWORD
+dbname=$DB_NAME
+table=transports
+select_field=transport
+where_field=domain
+hosts=localhost
+EOF
 
 RUN sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 
 RUN sed -i '/^#submission inet n[[:space:]]\+-[[:space:]]\+y[[:space:]]\+-[[:space:]]\+-[[:space:]]\+smtpd/,/^#/c\
-submission inet n       -       y       -       -       smtpd\n\
-  -o syslog_name=postfix/submission\n\
-  -o smtpd_tls_wrappermode=no\n\
-  -o smtpd_tls_security_level=encrypt\n\
-  -o smtpd_sasl_auth_enable=yes\n\
-  -o smtpd_sasl_type=dovecot\n\
-  -o smtpd_sasl_path=private/auth' /etc/postfix/master.cf
+    submission inet n       -       y       -       -       smtpd\n\
+    -o syslog_name=postfix/submission\n\
+    -o smtpd_tls_wrappermode=no\n\
+    -o smtpd_tls_security_level=encrypt\n\
+    -o smtpd_sasl_auth_enable=yes\n\
+    -o smtpd_sasl_type=dovecot\n\
+    -o smtpd_sasl_path=private/auth' /etc/postfix/master.cf
 
 RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_mynetworks,permit_sasl_authenticated,defer/' /etc/postfix/master.cf
 
 RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
-cleanup   unix  n       -       y       -       0       cleanup\n\
-  -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
+    cleanup   unix  n       -       y       -       0       cleanup\n\
+    -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
 
 # Careful of the single and double quoted strings in postconf settings (that is deliberate)
-RUN sudo postconf -e "myhostname = $HOSTNAME"
-RUN sudo postconf -e "mydomain = $MAIL_DOMAIN"
-RUN sudo postconf -e 'myorigin = $mydomain' 
-RUN sudo postconf -e 'inet_interfaces = all' 
-RUN sudo postconf -e 'inet_protocols = ipv4' 
-RUN sudo postconf -e 'mailbox_size_limit = 0' 
-RUN sudo postconf -e 'message_size_limit = 10240000' 
-RUN sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/fullchain.pem"
-RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem"
-RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
-RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
-RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
+RUN sudo postconf -e "myhostname = $HOSTNAME" && \
+    sudo postconf -e "mydomain = $MAIL_DOMAIN" && \
+    sudo postconf -e 'myorigin = $mydomain'  && \
+    sudo postconf -e 'inet_interfaces = all'  && \
+    sudo postconf -e 'inet_protocols = ipv4'  && \
+    sudo postconf -e 'mailbox_size_limit = 0'  && \
+    sudo postconf -e 'message_size_limit = 10240000'  && \
+    sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/fullchain.pem" && \
+    sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem" && \
+    sudo postconf -e "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 $ADDITIONAL_MY_NETWORKS" && \
+    sudo postconf -e "relay_domains = $MAIL_DOMAIN" && \
+    sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
+
+# Allow connections from trusted networks only (https://www.postfix.org/SMTPD_ACCESS_README.html)
+RUN sudo postconf -e 'smtpd_client_restrictions = permit_mynetworks, reject'
+
+# Don't talk to mail systems that don't know their own hostname.
+# With Postfix < 2.3, specify reject_unknown_hostname.
+# RUN sudo postconf -e 'smtpd_helo_restrictions = reject_unknown_helo_hostname'
+
+# Don't accept mail from domains that don't exist.
+# RUN sudo postconf -e 'smtpd_sender_restrictions = reject_unknown_sender_domain'
 
 # Force encrypt (client must use STARTLS)
 RUN if [ "$REQUIRE_STARTTLS" = "true" ]; then sudo postconf -e 'smtpd_tls_security_level = encrypt'; fi
@@ -247,12 +275,12 @@ RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks
 # Configure Dovecot master.cf
 RUN sudo cp /etc/dovecot/conf.d/10-master.conf /etc/dovecot/conf.d/10-master.conf.bak
 RUN sed -i '/unix_listener auth-userdb {/,/}/c\
-unix_listener auth-userdb {\n\
+    unix_listener auth-userdb {\n\
     path = /var/spool/postfix/private/auth\n\
     mode = 0600\n\
     user = postfix\n\
     group = postfix\n\
-  }' /etc/dovecot/conf.d/10-master.conf
+    }' /etc/dovecot/conf.d/10-master.conf
 
 # Configure Dovecot SSL
 RUN sudo cp /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.bak
@@ -296,44 +324,44 @@ RUN mkdir -p /var/mail/vhosts && chown -R dovecot:dovecot /var/mail/vhosts
 RUN chown -R www-data:www-data /var/lib/nginx
 
 # Add site config for lets encrypt to verify domain ownership
-RUN echo "server {"                                                                        > /etc/nginx/sites-available/$HOSTNAME  
-RUN echo "    listen 80;"                                                                 >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    listen [::]:80;"                                                            >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    server_name $HOSTNAME;"                                                     >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    root /var/www/html;"                                                        >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo ""                                                                               >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    location / {"                                                               >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "        index index.html;"                                                      >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    }"                                                                          >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo ""                                                                               >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    location ~ /.well-known/acme-challenge {"                                   >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "        allow all;"                                                             >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "    }"                                                                          >> /etc/nginx/sites-available/$HOSTNAME
-RUN echo "}"                                                                              >> /etc/nginx/sites-available/$HOSTNAME
+RUN echo "server {\n"                                \
+    "    listen 80;\n"                               \
+    "    listen [::]:80;\n"                          \
+    "    server_name $HOSTNAME;\n"                   \
+    "    root /var/www/html;\n"                      \
+    "\n"                                             \
+    "    location / {\n"                             \
+    "        index index.html;\n"                    \
+    "    }\n"                                        \
+    "\n"                                             \
+    "    location ~ /.well-known/acme-challenge {\n" \
+    "        allow all;\n"                           \
+    "    }\n"                                        \
+    "}\n"                                            > /etc/nginx/sites-available/$HOSTNAME                              
 
 # Create index.html just for testing site up and running
-RUN echo "<!DOCTYPE html>"                                                                 > /var/www/html/index.html
-RUN echo "<html lang=""en"">"                                                             >> /var/www/html/index.html
-RUN echo ""                                                                               >> /var/www/html/index.html
-RUN echo "<head>"                                                                         >> /var/www/html/index.html
-RUN echo "    <meta charset=""UTF-8"">"                                                   >> /var/www/html/index.html
-RUN echo "    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">" >> /var/www/html/index.html
-RUN echo "    <title>$MAIL_DOMAIN</title>"                                                >> /var/www/html/index.html
-RUN echo "</head>"                                                                        >> /var/www/html/index.html
-RUN echo ""                                                                               >> /var/www/html/index.html
-RUN echo "<body>"                                                                         >> /var/www/html/index.html
-RUN echo "    <p>active</p>"                                                              >> /var/www/html/index.html
-RUN echo "    <span>$(date '+%Y-%m-%d %H:%M:%S')</span>"                                  >> /var/www/html/index.html
-RUN echo "</body>"                                                                        >> /var/www/html/index.html
-RUN echo ""                                                                               >> /var/www/html/index.html
-RUN echo "</html>"                                                                        >> /var/www/html/index.html
+RUN echo "<!DOCTYPE html>\n"                                                           \
+    "<html lang=""en"">\n"                                                             \
+    "\n"                                                                               \
+    "<head>\n"                                                                         \
+    "    <meta charset=""UTF-8"">\n"                                                   \
+    "    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">\n" \
+    "    <title>$MAIL_DOMAIN</title>\n"                                                \
+    "</head>\n"                                                                        \
+    "\n"                                                                               \
+    "<body>\n"                                                                         \
+    "    <p>active</p>\n"                                                              \
+    "    <span>$(date '+%Y-%m-%d %H:%M:%S')</span>\n"                                  \
+    "</body>\n"                                                                        \
+    "\n"                                                                               \
+    "</html>\n"                                                                        > /var/www/html/index.html
+
+# Make site active
+RUN ln -s /etc/nginx/sites-available/$HOSTNAME /etc/nginx/sites-enabled/$HOSTNAME
 
 # Set timezone
 RUN  ln -fs /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
-
-# Make site active
-RUN ln -s /etc/nginx/sites-available/$HOSTNAME /etc/nginx/sites-enabled/$HOSTNAME
 
 # Create container startup script
 RUN echo "#!/bin/bash\n\

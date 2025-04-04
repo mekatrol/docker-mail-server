@@ -1,10 +1,12 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+
 DB_NAME="maildb"
 GROUP_ID="1002"
 
 # Define the CSV file
-csv_file="/users.csv"
+csv_file="$SCRIPT_DIR/users.csv"
 
 # Initialize a row counter
 row_number=0
