@@ -17,6 +17,8 @@ ARG MAIL_DOMAIN
 ARG REQUIRE_STARTTLS
 ARG TIMEZONE
 ARG ADDITIONAL_MY_NETWORKS
+ARG RELAY_HOST
+ARG RELAY_HOST_PORT=25
 
 # Configuration file directory
 ARG CONFIG_DIR="/home/${SSH_USER_NAME}"
@@ -236,6 +238,9 @@ RUN sudo postconf -e "myhostname = $HOSTNAME" && \
     sudo postconf -e "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 $ADDITIONAL_MY_NETWORKS" && \
     sudo postconf -e "relay_domains = $MAIL_DOMAIN" && \
     sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
+
+# Set relay host if defined
+RUN if [ -n "$RELAY_HOST" ]; then sudo postconf -e "relayhost = [$RELAY_HOST]:$RELAY_HOST_PORT"; fi
 
 # Allow connections from trusted networks only (https://www.postfix.org/SMTPD_ACCESS_README.html)
 RUN sudo postconf -e 'smtpd_client_restrictions = permit_mynetworks, reject'

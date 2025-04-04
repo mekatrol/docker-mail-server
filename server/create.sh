@@ -1,7 +1,21 @@
 #!/bin/bash
 
 # e.g. to run this script:
-# DB_NAME="maildb" POSTGRES_PASSWORD="postgress_pwd" DB_ADMIN_NAME="db_admin" DB_ADMIN_PASSWORD="admin_pwd" DB_READER_NAME="db_reader" DB_READER_PASSWORD="reader_pwd" SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" REQUIRE_STARTTLS="false" TIMEZONE="Australia/Sydney" ADDITIONAL_MY_NETWORKS="192.168.0.0/24" ./create.sh
+# DB_NAME="maildb" \
+# POSTGRES_PASSWORD="postgress_pwd" \
+# DB_ADMIN_NAME="db_admin" \
+# DB_ADMIN_PASSWORD="admin_pwd" \
+# DB_READER_NAME="db_reader" \
+# DB_READER_PASSWORD="reader_pwd" \
+# SSH_USER_NAME="ssh" \
+# SSH_USER_PASSWORD="pwd" \
+# HOSTNAME="mail.test.com" \
+# MAIL_DOMAIN="test.com" \
+# REQUIRE_STARTTLS="false" \
+# TIMEZONE="Australia/Sydney" \
+# ADDITIONAL_MY_NETWORKS="192.168.0.0/24" \
+# RELAY_HOST="192.168.10.1" \
+# ./create.sh
 
 # Check required arguments
 if [ -z "$DB_NAME" ]; then
@@ -111,6 +125,7 @@ if ! docker image ls --format '{{.Tag}}' | grep -q "^$IMAGE_NAME$"; then
     echo "Image '$IMAGE_NAME' does not exist. Creating it..."
     docker build -t "$IMAGE_NAME" \
         --build-arg ADDITIONAL_MY_NETWORKS="$ADDITIONAL_MY_NETWORKS" \
+        --build-arg RELAY_HOST="$RELAY_HOST" \
         --build-arg DB_NAME="$DB_NAME" \
         --build-arg POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
         --build-arg DB_ADMIN_NAME="$DB_ADMIN_NAME" \
