@@ -1,7 +1,14 @@
 #!/bin/bash
 
 # e.g. to run this script:
-# SSH_USER_NAME="ssh" SSH_USER_PASSWORD="pwd" HOSTNAME="mail.test.com" MAIL_DOMAIN="test.com" RELAY_TO="internalmail.test.com" TIMEZONE="Australia/Sydney" ./create.sh
+# # ADDITIONAL_MY_NETWORKS="192.168.0.0/24" \
+# SSH_USER_NAME="ssh" \
+# SSH_USER_PASSWORD="pwd" \
+# HOSTNAME="mail.test.com" \
+# MAIL_DOMAIN="test.com" \
+# RELAY_TO="internalmail.test.com" \
+# TIMEZONE="Australia/Sydney" \
+# ./create.sh
 
 if [ -z "$SSH_USER_NAME" ]; then
     echo "Error: SSH_USER_NAME must be defined!"
@@ -30,6 +37,11 @@ fi
 
 if [ -z "$TIMEZONE" ]; then
     echo "Error: TIMEZONE must be defined!"
+    exit 1
+fi
+
+if [ -z "$ADDITIONAL_MY_NETWORKS" ]; then
+    echo "Error: ADDITIONAL_MY_NETWORKS must be defined!"
     exit 1
 fi
 
@@ -74,6 +86,7 @@ fi
 if ! docker image ls --format '{{.Tag}}' | grep -q "^$IMAGE_NAME$"; then
     echo "Image '$IMAGE_NAME' does not exist. Creating it..."
     docker build -t "$IMAGE_NAME" \
+        --build-arg ADDITIONAL_MY_NETWORKS="$ADDITIONAL_MY_NETWORKS"\
         --build-arg SSH_USER_NAME="$SSH_USER_NAME" \
         --build-arg SSH_USER_PASSWORD="$SSH_USER_PASSWORD" \
         --build-arg HOSTNAME="$HOSTNAME" \

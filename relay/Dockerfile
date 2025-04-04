@@ -10,6 +10,7 @@ ARG HOSTNAME
 ARG MAIL_DOMAIN
 ARG RELAY_TO
 ARG TIMEZONE
+ARG ADDITIONAL_MY_NETWORKS
 
 RUN if [ -z "$SSH_USER_NAME" ]; then \
     echo "Error: SSH_USER_NAME must be defined!" && exit 1; \
@@ -31,11 +32,15 @@ RUN if [ -z "$RELAY_TO" ]; then \
     echo "Error: RELAY_TO must be defined!" && exit 1; \
     fi
 
-    RUN if [ -z "$TIMEZONE" ]; then \
+RUN if [ -z "$TIMEZONE" ]; then \
     echo "Error: TIMEZONE must be defined!" && exit 1; \
     fi
 
-    # Install packages
+RUN if [ -z "$ADDITIONAL_MY_NETWORKS" ]; then \
+    echo "Error: ADDITIONAL_MY_NETWORKS must be defined!" && exit 1; \
+    fi
+
+# Install packages
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     sudo \
     syslog-ng \
@@ -99,8 +104,8 @@ RUN sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 # RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_mynetworks,permit_sasl_authenticated,defer/' /etc/postfix/master.cf
 
 RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
-cleanup   unix  n       -       y       -       0       cleanup\n\
-  -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
+    cleanup   unix  n       -       y       -       0       cleanup\n\
+    -o header_checks=regexp:/etc/postfix/header_checks' /etc/postfix/master.cf
 
 # Careful of the single and double quoted strings in postconf settings (that is deliberate)
 RUN sudo postconf -e "myhostname = $HOSTNAME"
@@ -118,7 +123,7 @@ RUN sudo postconf -e 'message_size_limit = 10240000'
 # RUN sudo postconf -e 'smtp_tls_note_starttls_offer = yes'
 RUN sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/fullchain.pem"
 RUN sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem"
-RUN sudo postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128'
+RUN sudo postconf -e "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 $ADDITIONAL_MY_NETWORKS"
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
 RUN sudo postconf -e "relay_host = $RELAY_TO"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
