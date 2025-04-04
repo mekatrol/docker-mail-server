@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # e.g. to run this script:
-# # ADDITIONAL_MY_NETWORKS="192.168.0.0/24" \
+# ADDITIONAL_MY_NETWORKS="192.168.0.0/24" \
 # SSH_USER_NAME="ssh" \
 # SSH_USER_PASSWORD="pwd" \
 # HOSTNAME="mail.test.com" \
