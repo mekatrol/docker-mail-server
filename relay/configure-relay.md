@@ -187,10 +187,18 @@ $DOMAIN1    smtp:[$UPSTREAM_SMTP]
 $DOMAIN2    smtp:[$UPSTREAM_SMTP]
 EOF
 
+# Compile transports into db file
 sudo postmap /etc/postfix/transport
 
+# The domains that this SMTP server can relay
 sudo postconf -e "relay_domains = $DOMAIN1, $DOMAIN2"
+
+# No alias maps (accept all recipients)
 sudo postconf -e "virtual_alias_maps = "
+
+# Configure certificate
+sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$HOSTNAME-rsa/fullchain.pem" 
+sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem" 
 
 # Any recipient domains that are not one of the relay_domains will use any configured relayhost to send mail
 # If no relayhost is configured then the recipient domains SMTP server is used
@@ -285,7 +293,7 @@ Configure OpenDKIM
 sudo nano /etc/opendkim.conf
 ```
 
-Enter contents:
+Add contents to end of file:
 ```bash
 Domain                  test.com
 KeyFile                 /etc/opendkim/keys/test.com/default.private
@@ -294,6 +302,9 @@ Socket                  inet:12301@localhost
 Canonicalization        relaxed/simple
 Mode                    sv
 SubDomains              no
+# Servers to trust
+ExternalIgnoreList     /etc/opendkim/TrustedHosts
+InternalHosts          /etc/opendkim/TrustedHosts
 AutoRestart             yes
 ```
 
