@@ -138,12 +138,13 @@ RUN sudo chown $DB_READER_NAME:$DB_READER_NAME /home/mail
 
 # Set up PostgreSQL
 RUN service postgresql start && \
+    export DB_READER_GROUP_ID=$(getent group $DB_READER_NAME | cut -d: -f3) && \
     sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$POSTGRES_PASSWORD';"  && \
     sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_ADMIN_NAME WITH PASSWORD '$DB_ADMIN_PASSWORD';"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE USER $DB_READER_NAME WITH PASSWORD '$DB_READER_PASSWORD';"  && \
     sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE users (email VARCHAR PRIMARY KEY, password VARCHAR, realname VARCHAR, maildir VARCHAR NOT NULL, created TIMESTAMP WITH TIME ZONE DEFAULT now());"  && \    
-    sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE transports (domain VARCHAR PRIMARY KEY, gid INTEGER UNIQUE NOT NULL, transport VARCHAR NOT NULL);"  && \    
+    sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE transports (domain VARCHAR PRIMARY KEY, gid INTEGER NOT NULL, transport VARCHAR NOT NULL);"  && \    
     sudo -u postgres psql -d $DB_NAME -c "CREATE TABLE aliases (alias VARCHAR PRIMARY KEY, email VARCHAR NOT NULL);"  && \    
     sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_ADMIN_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON users TO $DB_ADMIN_NAME;"  && \
@@ -154,7 +155,8 @@ RUN service postgresql start && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT UPDATE ON transports TO $DB_READER_NAME;" && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON users TO $DB_READER_NAME;"  && \
     sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON aliases TO $DB_READER_NAME;"  && \
-    sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON transports TO $DB_READER_NAME;"
+    sudo -u postgres psql -d $DB_NAME -c "GRANT SELECT ON transports TO $DB_READER_NAME;" && \
+    if [ -n "$RELAY_HOST" ]; then sudo -u postgres psql -d $DB_NAME -c "INSERT INTO transports (domain, gid, transport) VALUES ('*', $DB_READER_GROUP_ID, 'relay:[$RELAY_HOST]:25') ON CONFLICT (domain) DO NOTHING;"; fi
 
 # Copy the users definition file
 COPY users.csv $CONFIG_DIR/users.csv 
@@ -164,7 +166,6 @@ COPY add_users.sh $CONFIG_DIR/add_users.sh
 
 # Change ownership
 RUN sudo chown remote:remote $CONFIG_DIR/add_users.sh && sudo chown $SSH_USER_NAME:$SSH_USER_NAME $CONFIG_DIR/users.csv
-
 
 # Set the DB name in the add users script
 RUN sudo sed -i "s/DB_NAME=\"maildb\"/DB_NAME=$DB_NAME/" $CONFIG_DIR/add_users.sh
@@ -237,10 +238,8 @@ RUN sudo postconf -e "myhostname = $HOSTNAME" && \
     sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$HOSTNAME-rsa/privkey.pem" && \
     sudo postconf -e "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 $ADDITIONAL_MY_NETWORKS" && \
     sudo postconf -e "relay_domains = $MAIL_DOMAIN" && \
-    sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
-
-# Set relay host if defined
-RUN if [ -n "$RELAY_HOST" ]; then sudo postconf -e "relayhost = [$RELAY_HOST]:$RELAY_HOST_PORT"; fi
+    sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain' && \
+    sudo postconf -e 'disable_dns_lookups = yes'
 
 # Allow connections from trusted networks only (https://www.postfix.org/SMTPD_ACCESS_README.html)
 RUN sudo postconf -e 'smtpd_client_restrictions = permit_mynetworks, reject'
@@ -274,8 +273,9 @@ RUN sudo postconf -e 'virtual_alias_maps = pgsql:/etc/postfix/aliases.cf'
 # Configure how to map to transports
 RUN sudo postconf -e 'transport_maps = pgsql:/etc/postfix/transports.cf'
 
-# Set cleanup options
-RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks 
+# Clean specified headers
+RUN echo "/^Received:.*with ESMTPSA/ IGNORE\n/^Return-Receipt-To:/ IGNORE\n/^Disposition-Notification-To:/ IGNORE" > /etc/postfix/header_checks  
+RUN sudo postmap /etc/postfix/header_checks
 
 # Configure Dovecot master.cf
 RUN sudo cp /etc/dovecot/conf.d/10-master.conf /etc/dovecot/conf.d/10-master.conf.bak

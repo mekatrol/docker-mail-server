@@ -127,7 +127,8 @@ RUN sudo postconf -e "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 
 RUN sudo postconf -e "relay_domains = $MAIL_DOMAIN"
 RUN sudo postconf -e "relay_host = $RELAY_TO"
 RUN sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain'
-RUN sudo postconf -e "transport_maps = hash:/etc/postfix/transport"
+RUN sudo postconf -e "transport_maps = hash:/etc/postfix/transport" && \
+    sudo postconf -e 'disable_dns_lookups = yes' 
 
 # Disable local mail delivery on mailserver, we are relaying to another server
 RUN sudo postconf -e 'local_recipient_maps = '
@@ -136,8 +137,9 @@ RUN echo "$MAIL_DOMAIN smtp:[$RELAY_TO]"  > /etc/postfix/transport
 
 RUN sudo postmap /etc/postfix/transport
 
-# Set cleanup options
-RUN echo "/^Received:.*with ESMTPSA/ IGNORE" > /etc/postfix/header_checks 
+# Clean specified headers
+RUN echo "/^Received:.*with ESMTPSA/ IGNORE\n/^Return-Receipt-To:/ IGNORE\n/^Disposition-Notification-To:/ IGNORE" > /etc/postfix/header_checks  
+RUN sudo postmap /etc/postfix/header_checks
 
 # Set owner for nginx to www-data
 RUN chown -R www-data:www-data /var/lib/nginx
