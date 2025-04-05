@@ -230,3 +230,145 @@ To:'Jane Doe'<jane.doe@domain1.com>
 
 QUIT
 ```
+
+## Configure SPF, DKIM and DMARC
+
+### SPF
+
+Set SPF record
+
+```bash
+v=spf1 ip4:YOUR.MAIL.SERVER.IP -all
+```
+
+e.g: if domain is test.com and IP address of SMTP server is 58.165.151.139 then:
+
+<pre>
+Type   Name       Value  
+TXT    test.com   v=spf1 ip4:58.165.151.139 -all  
+</pre>
+
+### DKIM
+
+```bash
+sudo apt install opendkim opendkim-tools -y
+```
+
+Make keys for domain (eg for test.com):
+
+```bash
+export MAIL_DOMAIN=test.com
+sudo mkdir -p /etc/opendkim/keys/$MAIL_DOMAIN
+cd /etc/opendkim/keys/$MAIL_DOMAIN
+sudo opendkim-genkey -s default -d $MAIL_DOMAIN
+sudo chown opendkim:opendkim default.private
+```
+Set DKIM record
+
+e.g: if domain is test.com and IP address of SMTP server is 58.165.151.139 then (where p=) which can be obtained from default.txt
+
+Make sure:
+
+* No newlines  
+* No quotes (")  
+* No semicolons at the end  
+* No extra whitespace  
+
+<pre>
+Type   Name                 Value  
+TXT    default._domainkey   starts with v=DKIM1; k=rsa; p=... 
+</pre>
+
+Configure OpenDKIM
+
+```bash
+sudo nano /etc/opendkim.conf
+```
+
+Enter contents:
+```bash
+Domain                  test.com
+KeyFile                 /etc/opendkim/keys/test.com/default.private
+Selector                default
+Socket                  inet:12301@localhost
+Canonicalization        relaxed/simple
+Mode                    sv
+SubDomains              no
+AutoRestart             yes
+```
+
+```bash
+sudo nano /etc/opendkim/KeyTable
+```
+
+Enter contents:
+```bash
+default._domainkey.test.com test.com:default:/etc/opendkim/keys/test.com/default.private
+```
+
+```bash
+sudo nano /etc/opendkim/SigningTable
+```
+
+Enter contents:
+```bash
+*@test.com default._domainkey.test.com
+```
+
+```bash
+sudo nano /etc/opendkim/TrustedHosts
+```
+
+NOTES: 
+> enter the IP address of servers who can send (relay) through this SMTP server  
+> i.e. add any IP addresses for on-premises servers  
+
+Enter:  
+```bash
+127.0.0.1
+localhost
+58.165.151.139
+```
+
+```bash
+sudo nano /etc/postfix/main.cf
+```
+
+Add:
+```bash
+# DKIM
+milter_default_action = accept
+milter_protocol = 2
+smtpd_milters = inet:localhost:12301
+non_smtpd_milters = inet:localhost:12301
+```
+
+Restart services:
+```bash
+sudo service opendkim restart
+sudo service postfix restart
+```
+
+### DMARC
+
+Set DMARC record
+
+e.g: if domain is test.com and IP address of SMTP server is 58.165.151.139 then:
+
+<pre>
+Type   Name       Value  
+TXT    _dmarc     v=DMARC1; p=quarantine; rua=mailto:postmaster@test.com 
+</pre>
+
+### Verify
+
+Use https://www.mail-tester.com to send a test email and check score.
+Use https://dmarcian.com/dkim-inspector/ for DKIM inspection
+
+Also:
+
+```bash
+dig TXT test.com
+dig TXT default._domainkey.test.com
+dig TXT _dmarc.test.com
+```
