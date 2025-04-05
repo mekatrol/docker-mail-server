@@ -17,6 +17,9 @@ sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catchall || [ -n "$email" ]; do
     ((row_number++))
 
+    # Remove all whitespace including spaces, tabs, newlines and carriage returns
+    is_catchall="$(echo "$is_catchall" | tr -d '\r' | xargs)"
+
     if [ -n "$email" ] && [ -n "$password" ] && [ -n "$is_catchall" ]; then
         echo "Row $row_number: email=$email, password=$password, display_name=$display_name, is catchall=$is_catchall"
 
@@ -32,7 +35,7 @@ tail -n +2 "$csv_file" | while IFS=, read -r email password display_name is_catc
         # Add transport if not already exists
         sudo -u postgres psql -d $DB_NAME -c "INSERT INTO transports (domain, gid, transport) VALUES ('$domain', $GROUP_ID, 'virtual:') ON CONFLICT (domain) DO NOTHING;"
 
-        # If is a catch ll then add catch all alias
+        # If is a catch all then add catch all alias
         if [ $is_catchall == "y" ]; then
             echo "Setting $email as @$domain catch all"
             catch_all_configured=1

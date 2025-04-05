@@ -127,10 +127,17 @@ Run certbot for the first time
 sudo certbot certonly --webroot --webroot-path=/var/www/html --email admin@$HOSTNAME --agree-tos --cert-name $HOSTNAME-rsa -d $HOSTNAME --key-type rsa
 ```
 
-## Install postfix
+## Install and configure postfix
+
+### Install
 
 ```bash
+# Install
 sudo apt install postfix -y
+
+# Backup configuration files
+sudo cp /etc/postfix/main.cf /etc/postfix/main.cf.bak
+sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 ```
 
 > When prompted select `Internet Site` and set your mail server host name (it will default to machine host name).
@@ -140,4 +147,49 @@ As a quick check start the postfix service, view logs, then stop the service. Yo
 sudo service postfix start
 sudo tail -n 100 /var/log/mail.log
 sudo service postfix stop
+```
+
+### Accept all users for configured domains and forward to upstream server
+```bash
+export DOMAIN1=@domain1.com
+export DOMAIN2=@domain2.com
+export UPSTREAM_SMTP=smtp.upstream.com
+
+cat <<EOF | sudo tee /etc/postfix/virtual > /dev/null
+@$DOMAIN1    smtp-relay@dummy.local
+@$DOMAIN2    smtp-relay@dummy.local
+EOF
+
+sudo postmap /etc/postfix/virtual
+
+sudo postconf -e "virtual_alias_domains = $DOMAIN1 $DOMAIN2"
+sudo postconf -e "virtual_alias_maps = hash:/etc/postfix/virtual"
+sudo postconf -e "relayhost = [$UPSTREAM_SMTP]:25"
+
+sudo service postfix restart
+```
+
+### Test SMTP
+
+On another machine start telnet
+
+`telnet`
+
+Send an email to each domain using the following template (not the blank line before dot is needed to signal end of message)
+
+```bash
+OPEN smtp.upstream.com 25
+
+EHLO dummydomain.com
+
+MAIL FROM:<user@dummydomain.com>
+RCPT TO:<user@domain1.com> NOTIFY=success,failure
+DATA
+Subject: Test using telnet
+From:'John Doe'<john.doe@dummydomain.com>
+To:'Jane Doe'<jane.doe@domain1.com>
+
+.
+
+QUIT
 ```
