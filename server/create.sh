@@ -105,7 +105,7 @@ NETWORK_SUBNET="172.16.3.0/24"
 NETWORK_GATEWAY="172.16.3.1"
 
 # Static IP address for the mail server host
-CONTAINER_IP_ADDR="172.16.3.200"
+CONTAINER_IP_ADDR="172.16.3.210"
 
 # Mail server host name
 CONTAINER_HOST_NAME="$HOSTNAME"

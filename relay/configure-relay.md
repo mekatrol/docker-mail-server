@@ -162,6 +162,18 @@ In /etc/postfix/main.cf add internal on-premises server IP to end of mynetworks
 sudo nano /etc/postfix/main.cf
 
 mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 **ADD HERE**
+
+# e.g.
+
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 58.165.151.139/32
+```
+
+In /etc/postfix/main.cf remove the blank entry (two consecutive commas without a value) 
+
+```bash
+sudo nano /etc/postfix/main.cf
+
+mydestination = $myhostname, smtp.<domain>.com, localhost.<domain>.com, , localhost
 ```
 
 ### Accept all users for configured domains and forward to upstream server for those domains
