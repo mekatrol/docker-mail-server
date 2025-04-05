@@ -15,6 +15,10 @@ Update the following files to FQDN hostname and then reboot
 * `nano /etc/hostname`
 * `nano /etc/hosts`
 
+Reboot server
+
+`sudo reboot`
+
 ## Set up SSH
 
 ### Add ssh user
@@ -124,7 +128,7 @@ sudo service nginx restart
 
 Run certbot for the first time
 ```bash
-sudo certbot certonly --webroot --webroot-path=/var/www/html --email admin@$HOSTNAME --agree-tos --cert-name $HOSTNAME-rsa -d $HOSTNAME --key-type rsa
+sudo certbot certonly --webroot --webroot-path=/var/www/html --email admin@$HOSTNAME --agree-tos --no-eff-email --cert-name $HOSTNAME-rsa -d $HOSTNAME --key-type rsa
 ```
 
 ## Install and configure postfix
@@ -134,42 +138,63 @@ sudo certbot certonly --webroot --webroot-path=/var/www/html --email admin@$HOST
 ```bash
 # Install
 sudo apt install postfix -y
+```
 
+> When prompted select `Internet Site` and set your mail server host name (it will default to machine host name).
+
+```bash
 # Backup configuration files
 sudo cp /etc/postfix/main.cf /etc/postfix/main.cf.bak
 sudo cp /etc/postfix/master.cf /etc/postfix/master.cf.bak
 ```
 
-> When prompted select `Internet Site` and set your mail server host name (it will default to machine host name).
-
 As a quick check start the postfix service, view logs, then stop the service. You should successfully see log entries with no errors.
 ```bash
 sudo service postfix start
 sudo tail -n 100 /var/log/mail.log
-sudo service postfix stop
 ```
 
-### Accept all users for configured domains and forward to upstream server
+### Accept relaying from internal on-premises server
+
+In /etc/postfix/main.cf add internal on-premises server IP to end of mynetworks 
+
+```bash
+sudo nano /etc/postfix/main.cf
+
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 **ADD HERE**
+```
+
+### Accept all users for configured domains and forward to upstream server for those domains
 ```bash
 export DOMAIN1=@domain1.com
 export DOMAIN2=@domain2.com
 export UPSTREAM_SMTP=smtp.upstream.com
 
-cat <<EOF | sudo tee /etc/postfix/virtual > /dev/null
-@$DOMAIN1    smtp-relay@dummy.local
-@$DOMAIN2    smtp-relay@dummy.local
+cat <<EOF | sudo tee /etc/postfix/transport > /dev/null
+$DOMAIN1    smtp:[$UPSTREAM_SMTP]
+$DOMAIN2    smtp:[$UPSTREAM_SMTP]
 EOF
 
-sudo postmap /etc/postfix/virtual
+sudo postmap /etc/postfix/transport
 
-sudo postconf -e "virtual_alias_domains = $DOMAIN1 $DOMAIN2"
-sudo postconf -e "virtual_alias_maps = hash:/etc/postfix/virtual"
-sudo postconf -e "relayhost = [$UPSTREAM_SMTP]:25"
+sudo postconf -e "relay_domains = $DOMAIN1, $DOMAIN2"
+sudo postconf -e "virtual_alias_maps = "
+
+# Any recipient domains that are not one of the relay_domains will use any configured relayhost to send mail
+# If no relayhost is configured then the recipient domains SMTP server is used
+sudo postconf -e "relayhost = "
+sudo postconf -e "transport_maps = hash:/etc/postfix/transport"
 
 sudo service postfix restart
 ```
 
 ### Test SMTP
+
+Check virtual transport working
+```bash
+postmap -q $DOMAIN1 /etc/postfix/transport
+postmap -q $DOMAIN2 /etc/postfix/transport
+```
 
 On another machine start telnet
 
