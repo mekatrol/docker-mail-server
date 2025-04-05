@@ -383,3 +383,28 @@ dig TXT test.com
 dig TXT default._domainkey.test.com
 dig TXT _dmarc.test.com
 ```
+
+Test SMTP client:
+
+```c#
+using System.Net.Mail;
+using System.Net;
+
+namespace SendMail
+{
+    internal class Program
+    {
+        static void Main()
+        {
+            using var smtpClient = new SmtpClient("smtp.test.com")
+            {
+                Port = 587,
+                Credentials = new NetworkCredential("email@smtp.test.com", "email_password"),
+                EnableSsl = true
+            };
+
+            smtpClient.Send("email@test.com", "recipient@test.com", "authenticated!", "email body");
+        }
+    }
+}
+```

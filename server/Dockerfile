@@ -220,7 +220,9 @@ RUN sed -i '/^#submission inet n[[:space:]]\+-[[:space:]]\+y[[:space:]]\+-[[:spa
     -o smtpd_sasl_type=dovecot\n\
     -o smtpd_sasl_path=private/auth' /etc/postfix/master.cf
 
-RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_mynetworks,permit_sasl_authenticated,defer/' /etc/postfix/master.cf
+RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_sasl_authenticated,defer/' /etc/postfix/master.cf
+
+RUN sed -i '0,/^#\s*-o milter_macro_daemon_name=ORIGINATING/ s//  -o milter_macro_daemon_name=ORIGINATING/' /etc/postfix/master.cf
 
 RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
     cleanup   unix  n       -       y       -       0       cleanup\n\
@@ -294,6 +296,9 @@ RUN sudo sed -i "s/^ssl_cert = <\/etc\/dovecot\/private\/dovecot.pem/ssl_cert = 
 RUN sudo sed -i "s/^ssl_key = <\/etc\/dovecot\/private\/dovecot.key/ssl_key = <\/etc\/letsencrypt\/live\/$HOSTNAME-rsa\/privkey.pem/" /etc/dovecot/conf.d/10-ssl.conf
 RUN sudo sed -i 's/^#ssl_min_protocol = TLSv1.2/ssl_min_protocol = TLSv1.2/' /etc/dovecot/conf.d/10-ssl.conf
 RUN sudo sed -i 's/^#ssl_prefer_server_ciphers = no/ssl_prefer_server_ciphers = yes/' /etc/dovecot/conf.d/10-ssl.conf
+
+# Configure Dovecot auth for plain and login
+RUN sudo sed -i 's/^auth_mechanisms = plain/auth_mechanisms = plain login/' /etc/dovecot/conf.d/10-auth.conf
 
 # Configure Dovecot auth for SQL
 RUN sudo sed -i 's/^!include auth-system.conf.ext/#!include auth-system.conf.ext/' /etc/dovecot/conf.d/10-auth.conf
