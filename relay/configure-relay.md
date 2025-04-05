@@ -1,6 +1,6 @@
 # Configuring cloud MTA to use on-premises MTA
 
-# On a new digital ocean droplet
+# On a new digital ocean Ubuntu droplet
 
 ## Update packages
 
