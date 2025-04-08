@@ -262,7 +262,7 @@ TXT    test.com   v=spf1 ip4:58.165.151.139 -all
 sudo apt install opendkim opendkim-tools -y
 ```
 
-Make keys for domain (eg for test.com):
+Make keys for domain (eg for test.com) - can be done for each domain (changing $MAIL_DOMAIN):
 
 ```bash
 export MAIL_DOMAIN=test.com
@@ -295,16 +295,16 @@ sudo nano /etc/opendkim.conf
 
 Add contents to end of file:
 ```bash
-Domain                  test.com
-KeyFile                 /etc/opendkim/keys/test.com/default.private
 Selector                default
 Socket                  inet:12301@localhost
 Canonicalization        relaxed/simple
 Mode                    sv
 SubDomains              no
 # Servers to trust
-ExternalIgnoreList     /etc/opendkim/TrustedHosts
-InternalHosts          /etc/opendkim/TrustedHosts
+ExternalIgnoreList      /etc/opendkim/TrustedHosts
+InternalHosts           /etc/opendkim/TrustedHosts
+KeyTable                /etc/opendkim/KeyTable
+SigningTable            /etc/opendkim/SigningTable
 AutoRestart             yes
 ```
 
@@ -312,7 +312,7 @@ AutoRestart             yes
 sudo nano /etc/opendkim/KeyTable
 ```
 
-Enter contents:
+Enter contents (add each domain on a new line):
 ```bash
 default._domainkey.test.com test.com:default:/etc/opendkim/keys/test.com/default.private
 ```
@@ -321,9 +321,9 @@ default._domainkey.test.com test.com:default:/etc/opendkim/keys/test.com/default
 sudo nano /etc/opendkim/SigningTable
 ```
 
-Enter contents:
+Enter contents (add each domain on a new line):
 ```bash
-*@test.com default._domainkey.test.com
+test.com default._domainkey.test.com
 ```
 
 ```bash
