@@ -373,8 +373,10 @@ TXT    _dmarc     v=DMARC1; p=quarantine; rua=mailto:postmaster@test.com
 
 ### Verify
 
-Use https://www.mail-tester.com to send a test email and check score.
-Use https://dmarcian.com/dkim-inspector/ for DKIM inspection
+1. Send an email to a Gmail account.
+2. Click on the message
+3. Select show original (ellipses on right hand side)
+4. Verify SPF, DKIM and DMARC have all passed.
 
 Also:
 
