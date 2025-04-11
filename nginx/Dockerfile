@@ -33,7 +33,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     tzdata \
     cron \
     openssh-server \
-    nginx \
     certbot \
     python3-certbot-nginx \
     nginx

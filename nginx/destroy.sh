@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Name of the container
-CONTAINER_NAME="mail-nginx"
+CONTAINER_NAME="nginx"
 
 # Name of the image
-IMAGE_NAME="mail-nginx"
+IMAGE_NAME="nginx"
 
 # Check if the container exists
 if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then

@@ -24,13 +24,13 @@ if [ -z "$TIMEZONE" ]; then
 fi
 
 # The name of the image that will be created with 'docker build'
-IMAGE_NAME="mail-nginx"
+IMAGE_NAME="nginx"
 
 # The name of the container that will be created with docker run
-CONTAINER_NAME="mail-nginx"
+CONTAINER_NAME="nginx"
 
-# The name of the network the mail server will use
-NETWORK_NAME="mail-server-network"
+# The name of the network the nginx server will use
+NETWORK_NAME="docker-network"
 
 # The driver method used when creting the network if it does not already exist
 NETWORK_DRIVER="ipvlan"

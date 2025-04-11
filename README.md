@@ -32,7 +32,7 @@ IMAGE_NAME="mail-server"
 CONTAINER_NAME="mail-server"
 
 # The name of the network the mail server will use
-NETWORK_NAME="mail-server-network"
+NETWORK_NAME="docker-network"
 
 # The driver method used when creting the network if it does not already exist
 NETWORK_DRIVER="ipvlan"
