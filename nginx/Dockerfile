@@ -25,7 +25,7 @@ RUN if [ -z "$TIMEZONE" ]; then \
     echo "Error: TIMEZONE must be defined!" && exit 1; \
     fi
 
-    # Install packages
+# Install packages
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     sudo \
     syslog-ng \
@@ -86,7 +86,7 @@ RUN /configure_reverse_proxy.sh
 RUN  ln -fs /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-    # Create container startup script
+# Create container startup script
 RUN echo "#!/bin/bash\n\
     sudo service syslog-ng start\n\
     sudo service cron start\n\
