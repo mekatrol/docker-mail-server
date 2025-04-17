@@ -222,6 +222,8 @@ RUN sed -i '/^#submission inet n[[:space:]]\+-[[:space:]]\+y[[:space:]]\+-[[:spa
 
 RUN sed -i '0,/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/s/^#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject/  -o smtpd_recipient_restrictions=permit_sasl_authenticated,defer/' /etc/postfix/master.cf
 
+RUN sed -i '0,/^#  -o smtpd_relay_restrictions=/s/^#  -o smtpd_relay_restrictions=/  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject_unauth_destination/' /etc/postfix/master.cf
+
 RUN sed -i '0,/^#\s*-o milter_macro_daemon_name=ORIGINATING/ s//  -o milter_macro_daemon_name=ORIGINATING/' /etc/postfix/master.cf
 
 RUN sed -i '/cleanup   unix  n       -       y       -       0       cleanup/c\
