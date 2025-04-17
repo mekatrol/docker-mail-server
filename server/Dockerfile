@@ -245,8 +245,8 @@ RUN sudo postconf -e "myhostname = $HOSTNAME" && \
     sudo postconf -e 'mydestination = $myhostname, localhost.$mydomain, $mydomain' && \
     sudo postconf -e 'disable_dns_lookups = yes'
 
-# Allow connections from trusted networks only (https://www.postfix.org/SMTPD_ACCESS_README.html)
-RUN sudo postconf -e 'smtpd_client_restrictions = permit_mynetworks, reject'
+# Allow connections from trusted networks and authenticated users only (https://www.postfix.org/SMTPD_ACCESS_README.html)
+RUN sudo postconf -e 'smtpd_client_restrictions = permit_mynetworks, permit_sasl_authenticated, reject'
 
 # Don't talk to mail systems that don't know their own hostname.
 # With Postfix < 2.3, specify reject_unknown_hostname.
